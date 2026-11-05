@@ -229,6 +229,16 @@ function decideGhost( game, g ) {
   } );
   const choices = options.length ? options : [ OPPOSITE[ g.dir ] ];
 
+  if ( g.state === 'frightened' ) {
+    ghostRunAway( game, g );
+    return;
+  }
+
+  if ( g.state === 'returning' ) {
+    ghostReturnHome( game, g );
+    return;
+  }
+
   if ( g.kind === 'hunter' ) {
     const px = Math.round( p.x );
     const py = Math.round( p.y );
@@ -333,6 +343,8 @@ function resetPositions( game ) {
     g.dir = 'up';
     g.nextDir = null;
     g.patrolIndex = 0;
+    g.state = 'normal';
+    g.returnTarget = null;
   } );
 }
 
@@ -340,12 +352,89 @@ function collides( a, b ) {
   return Math.abs( a.x - b.x ) < 0.5 && Math.abs( a.y - b.y ) < 0.5;
 }
 
+function isFrightened( ghost ) {
+  return ghost.state === 'frightened';
+}
+
+function ghostRunAway( game, ghost ) {
+  const currentX = Math.round( ghost.x );
+  const currentY = Math.round( ghost.y );
+  const px = Math.round( game.pacman.x );
+  const py = Math.round( game.pacman.y );
+
+  let bestDir = null;
+  let bestDist = -Infinity;
+
+  for ( const dir of Object.keys( DIRS ) ) {
+    if ( dir === OPPOSITE[ ghost.dir ] && Object.keys( DIRS ).length > 2 ) continue;
+    if ( !canMove( game.grid, currentX, currentY, dir, 'ghost' ) ) continue;
+    const d = DIRS[ dir ];
+    const nx = currentX + d.x;
+    const ny = currentY + d.y;
+    const dist = Math.abs( nx - px ) + Math.abs( ny - py );
+    if ( dist > bestDist ) {
+      bestDist = dist;
+      bestDir = dir;
+    }
+  }
+
+  if ( bestDir ) ghost.dir = bestDir;
+}
+
+function ghostReturnHome( game, ghost ) {
+  if ( !ghost.returnTarget ) {
+    ghost.returnTarget = { x: 13, y: 14 };
+  }
+
+  const dirToHome = ghostDirTowardTarget( game, ghost, ghost.returnTarget.x, ghost.returnTarget.y, true );
+  if ( dirToHome ) {
+    ghost.dir = dirToHome;
+    return;
+  }
+
+  const options = Object.keys( DIRS ).filter( ( dir ) => canMove( game.grid, Math.round( ghost.x ), Math.round( ghost.y ), dir, 'ghost' ) );
+  if ( options.length ) ghost.dir = options[ 0 ];
+}
+
 function update( game ) {
+  if ( game.frightenedTimer > 0 ) {
+    game.frightenedTimer = Math.max( 0, game.frightenedTimer - 1 / 60 );
+  }
+
+  if ( game.frightenedTimer === 0 ) {
+    game.ghosts.forEach( ( g ) => {
+      if ( g.state === 'frightened' ) g.state = 'normal';
+    } );
+  }
+
   movePacman( game );
   game.ghosts.forEach( ( g ) => moveGhost( game, g ) );
 
   for ( const g of game.ghosts ) {
-    if ( collides( game.pacman, g ) ) {
+    if ( g.state === 'frightened' && collides( game.pacman, g ) ) {
+      game.score += 200;
+      g.state = 'returning';
+      g.returnTarget = { x: 13, y: 14 };
+      g.x = Math.round( g.x );
+      g.y = Math.round( g.y );
+      g.dir = 'up';
+      break;
+    }
+
+    if ( g.state === 'returning' ) {
+      if ( Math.round( g.x ) === 13 && Math.round( g.y ) === 14 ) {
+        g.state = game.frightenedTimer > 0 ? 'frightened' : 'normal';
+        g.returnTarget = null;
+      }
+    }
+  }
+
+  for ( const g of game.ghosts ) {
+    if ( g.state === 'frightened' ) {
+      ghostRunAway( game, g );
+    } else if ( g.state === 'returning' ) {
+      ghostReturnHome( game, g );
+    } else if ( collides( game.pacman, g ) ) {
       game.lives--;
       if ( game.lives <= 0 ) {
         game.state = 'lost';

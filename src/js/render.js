@@ -79,6 +79,19 @@ function drawDots( ctx, grid ) {
   }
 }
 
+function drawPowerPellets( ctx, grid ) {
+  ctx.fillStyle = '#ffcc00';
+  for ( let y = 0; y < grid.length; y++ ) {
+    for ( let x = 0; x < grid[ 0 ].length; x++ ) {
+      if ( grid[ y ][ x ] !== 4 ) continue;
+      const { cx, cy } = cellCenter( x, y );
+      ctx.beginPath();
+      ctx.arc( cx, cy, 6, 0, Math.PI * 2 );
+      ctx.fill();
+    }
+  }
+}
+
 function drawPacman( ctx, p, frame ) {
   const { cx, cy } = cellCenter( p.x, p.y );
   let rot = 0;
@@ -96,6 +109,14 @@ function drawPacman( ctx, p, frame ) {
   ctx.arc( cx, cy, TILE / 2 - 1, rot + open * Math.PI, rot - open * Math.PI );
   ctx.closePath();
   ctx.fill();
+
+  if ( ( window.game && window.game.frightenedTimer > 0 ) || p.aura > 0 ) {
+    ctx.beginPath();
+    ctx.arc( cx, cy, TILE / 2 + 5, 0, Math.PI * 2 );
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
 }
 
 function drawGhost( ctx, g, color ) {
@@ -106,7 +127,21 @@ function drawGhost( ctx, g, color ) {
   const left = cx - r;
   const right = cx + r;
 
-  ctx.fillStyle = color;
+  if ( g.state === 'returning' ) {
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc( cx, cy - 1, 3, 0, Math.PI * 2 );
+    ctx.fill();
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc( cx - 2.5, cy - 1, 1.5, 0, Math.PI * 2 );
+    ctx.arc( cx + 2.5, cy - 1, 1.5, 0, Math.PI * 2 );
+    ctx.fill();
+    return;
+  }
+
+  const fillColor = g.state === 'frightened' ? '#1d7ef0' : color;
+  ctx.fillStyle = fillColor;
   ctx.beginPath();
   ctx.arc( cx, cy - 1, r, Math.PI, 0, false ); // cabeza
   ctx.lineTo( right, bottom );
@@ -157,6 +192,7 @@ function draw( ctx, game, frame ) {
   drawWalls( ctx, grid );
   drawDoor( ctx, grid );
   drawDots( ctx, grid );
+  drawPowerPellets( ctx, grid );
   drawPacman( ctx, game.pacman, frame );
   game.ghosts.forEach( ( g, i ) => drawGhost( ctx, g, GHOST_COLORS[ i ] || '#ff0000' ) );
   drawHUD( ctx, game, W );
