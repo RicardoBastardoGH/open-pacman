@@ -86,8 +86,12 @@ function isWall( grid, x, y, actor ) {
 function canMove( grid, x, y, dir, actor ) {
   const d = DIRS[ dir ];
   if ( !d ) return false;
-  const tx = x + d.x;
-  const ty = y + d.y;
+
+  const cellX = Math.round( x );
+  const cellY = Math.round( y );
+  const tx = cellX + d.x;
+  const ty = cellY + d.y;
+
   // Tunel: salir por un borde en la fila del tunel siempre es valido.
   if ( ty === TUNNEL_ROW && ( tx < 0 || tx >= grid[ 0 ].length ) ) return true;
   return !isWall( grid, tx, ty, actor );
@@ -239,6 +243,10 @@ function decideGhost( game, g ) {
     return;
   }
 
+  if ( !g.dir || !canMove( grid, currentX, currentY, g.dir, 'ghost' ) ) {
+    g.dir = choices[ 0 ] || 'left';
+  }
+
   if ( g.kind === 'hunter' ) {
     const px = Math.round( p.x );
     const py = Math.round( p.y );
@@ -362,12 +370,16 @@ function ghostRunAway( game, ghost ) {
   const px = Math.round( game.pacman.x );
   const py = Math.round( game.pacman.y );
 
-  let bestDir = null;
+  const validDirs = Object.keys( DIRS ).filter( ( dir ) => canMove( game.grid, currentX, currentY, dir, 'ghost' ) );
+  if ( !validDirs.length ) return;
+
+  const pool = validDirs.filter( ( dir ) => dir !== OPPOSITE[ ghost.dir ] );
+  const candidates = pool.length ? pool : validDirs;
+
+  let bestDir = candidates[ 0 ];
   let bestDist = -Infinity;
 
-  for ( const dir of Object.keys( DIRS ) ) {
-    if ( dir === OPPOSITE[ ghost.dir ] && Object.keys( DIRS ).length > 2 ) continue;
-    if ( !canMove( game.grid, currentX, currentY, dir, 'ghost' ) ) continue;
+  for ( const dir of candidates ) {
     const d = DIRS[ dir ];
     const nx = currentX + d.x;
     const ny = currentY + d.y;
@@ -378,7 +390,7 @@ function ghostRunAway( game, ghost ) {
     }
   }
 
-  if ( bestDir ) ghost.dir = bestDir;
+  ghost.dir = bestDir;
 }
 
 function ghostReturnHome( game, ghost ) {
@@ -403,7 +415,10 @@ function update( game ) {
 
   if ( game.frightenedTimer === 0 ) {
     game.ghosts.forEach( ( g ) => {
-      if ( g.state === 'frightened' ) g.state = 'normal';
+      if ( g.state === 'frightened' ) {
+        g.state = 'normal';
+        g.returnTarget = null;
+      }
     } );
   }
 
@@ -430,11 +445,8 @@ function update( game ) {
   }
 
   for ( const g of game.ghosts ) {
-    if ( g.state === 'frightened' ) {
-      ghostRunAway( game, g );
-    } else if ( g.state === 'returning' ) {
-      ghostReturnHome( game, g );
-    } else if ( collides( game.pacman, g ) ) {
+    if ( g.state === 'frightened' || g.state === 'returning' ) continue;
+    if ( collides( game.pacman, g ) ) {
       game.lives--;
       if ( game.lives <= 0 ) {
         game.state = 'lost';

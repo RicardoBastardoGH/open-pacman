@@ -92,7 +92,7 @@ function drawPowerPellets( ctx, grid ) {
   }
 }
 
-function drawPacman( ctx, p, frame ) {
+function drawPacman( ctx, p, frame, game ) {
   const { cx, cy } = cellCenter( p.x, p.y );
   let rot = 0;
   if ( p.dir === 'right' ) rot = 0;
@@ -110,7 +110,7 @@ function drawPacman( ctx, p, frame ) {
   ctx.closePath();
   ctx.fill();
 
-  if ( ( window.game && window.game.frightenedTimer > 0 ) || p.aura > 0 ) {
+  if ( game && game.frightenedTimer > 0 ) {
     ctx.beginPath();
     ctx.arc( cx, cy, TILE / 2 + 5, 0, Math.PI * 2 );
     ctx.strokeStyle = 'rgba(255,255,255,0.7)';
