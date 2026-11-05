@@ -58,7 +58,45 @@ const GHOST_STARTS = [
   { x: 15, y: 14, kind: 'ambusher' }, // cyan: emboscada
 ];
 
+const POWER_PELLET_CANDIDATES = {
+  topLeft: [
+    { x: 1, y: 1 },
+    { x: 1, y: 2 },
+    { x: 2, y: 1 },
+  ],
+  topRight: [
+    { x: 26, y: 1 },
+    { x: 26, y: 2 },
+    { x: 25, y: 1 },
+  ],
+  bottomLeft: [
+    { x: 1, y: 29 },
+    { x: 1, y: 28 },
+    { x: 2, y: 29 },
+  ],
+  bottomRight: [
+    { x: 26, y: 29 },
+    { x: 26, y: 28 },
+    { x: 25, y: 29 },
+  ],
+};
+
+function choosePowerPellets() {
+  const corners = Object.keys( POWER_PELLET_CANDIDATES );
+  const pellets = [];
+
+  for ( const corner of corners ) {
+    const candidates = POWER_PELLET_CANDIDATES[ corner ];
+    const selected = candidates[ Math.floor( Math.random() * candidates.length ) ];
+    pellets.push( { x: selected.x, y: selected.y, eaten: false, corner } );
+  }
+
+  return pellets;
+}
+
 window.MAZE = MAZE;
 window.TUNNEL_ROW = TUNNEL_ROW;
 window.PACMAN_START = PACMAN_START;
 window.GHOST_STARTS = GHOST_STARTS;
+window.POWER_PELLET_CANDIDATES = POWER_PELLET_CANDIDATES;
+window.choosePowerPellets = choosePowerPellets;
