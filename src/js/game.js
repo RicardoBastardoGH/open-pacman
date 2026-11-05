@@ -26,6 +26,13 @@ function createGame() {
   // La celda de inicio de Pacman arranca sin dot.
   grid[ PACMAN_START.y ][ PACMAN_START.x ] = 0;
 
+  const powerPellets = choosePowerPellets();
+  for ( const pellet of powerPellets ) {
+    if ( grid[ pellet.y ][ pellet.x ] === 2 ) grid[ pellet.y ][ pellet.x ] = 0;
+    // Reemplaza el punto normal por un power pellet con una marca de estado.
+    grid[ pellet.y ][ pellet.x ] = 4;
+  }
+
   let dots = 0;
   for ( const row of grid ) for ( const v of row ) if ( v === 2 ) dots++;
 
@@ -34,6 +41,8 @@ function createGame() {
     score: 0,
     lives: 3,
     dotsRemaining: dots,
+    frightenedTimer: 0,
+    powerPellets,
     grid,
     pacman: {
       x: PACMAN_START.x,
@@ -41,6 +50,7 @@ function createGame() {
       dir: 'left',
       nextDir: null,
       speed: PACMAN_SPEED,
+      aura: 0,
     },
     ghosts: GHOST_STARTS.map( ( g ) => ( {
       x: g.x,
@@ -50,6 +60,8 @@ function createGame() {
       speed: GHOST_SPEED,
       kind: g.kind,
       patrolIndex: 0,
+      state: 'normal',
+      returnTarget: null,
     } ) ),
   };
 }
@@ -181,6 +193,19 @@ function movePacman( game ) {
       grid[ p.y ][ p.x ] = 0;
       game.score += 10;
       game.dotsRemaining--;
+    }
+    if ( grid[ p.y ][ p.x ] === 4 ) {
+      grid[ p.y ][ p.x ] = 0;
+      game.score += 50;
+      game.frightenedTimer += 8;
+      game.powerPellets.forEach( ( pellet ) => {
+        if ( pellet.x === p.x && pellet.y === p.y ) pellet.eaten = true;
+      } );
+      game.ghosts.forEach( ( g ) => {
+        if ( g.state === 'normal' ) {
+          g.state = 'frightened';
+        }
+      } );
     }
     // Si no puede seguir, se detiene en la celda.
     if ( !canMove( grid, p.x, p.y, p.dir, 'pacman' ) ) return;
