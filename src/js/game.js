@@ -253,16 +253,26 @@ function decideGhost( game, g ) {
 
   if ( g.kind === 'patrol' ) {
     const target = PATROL_CORNERS[ g.patrolIndex % PATROL_CORNERS.length ];
-    const dirToCorner = ghostDirTowardTarget( game, g, target.x, target.y, true );
-    if ( dirToCorner ) {
-      g.dir = dirToCorner;
-    } else {
-      g.dir = choices[ Math.floor( Math.random() * choices.length ) ];
+    let dirToCorner = ghostDirTowardTarget( game, g, target.x, target.y, true );
+
+    if ( !dirToCorner ) {
+      const cornerOptions = Object.keys( DIRS ).filter( ( dir ) => {
+        if ( dir === OPPOSITE[ g.dir ] && choices.length > 1 ) return false;
+        return canMove( grid, currentX, currentY, dir, 'ghost' );
+      } );
+      dirToCorner = cornerOptions.length ? cornerOptions[ 0 ] : choices[ 0 ];
     }
+
+    g.dir = dirToCorner;
 
     if ( currentX === target.x && currentY === target.y ) {
       g.patrolIndex = ( g.patrolIndex + 1 ) % PATROL_CORNERS.length;
     }
+    return;
+  }
+
+  if ( g.kind === 'random' ) {
+    g.dir = choices[ Math.floor( Math.random() * choices.length ) ];
     return;
   }
 
@@ -329,3 +339,4 @@ window.update = update;
 window.DIRS = DIRS;
 window.GHOST_STARTS = GHOST_STARTS;
 window.PATROL_CORNERS = PATROL_CORNERS;
+
